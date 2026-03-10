@@ -13,8 +13,8 @@ builder.Services.AddOpenApi();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Register ASP.NET Core Identity
-builder.Services.AddIdentityCore<ApplicationUser>()
+// Register ASP.NET Core Identity with built-in API endpoints
+builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 // Register application services
@@ -30,6 +30,11 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.MapIdentityApi<ApplicationUser>();
+
 app.MapBoardEndpoints();
 
 app.Run();
+
+// Required for WebApplicationFactory in integration tests
+public partial class Program { }
