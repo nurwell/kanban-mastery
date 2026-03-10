@@ -1,5 +1,7 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using KanbanApi.Data;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +16,7 @@ public class AuthTests : IClassFixture<WebApplicationFactory<Program>>
 
     public AuthTests(WebApplicationFactory<Program> factory)
     {
-        _client = factory.WithWebHostBuilder(builder =>
+        var customFactory = factory.WithWebHostBuilder(builder =>
         {
             builder.ConfigureServices(services =>
             {
@@ -31,11 +33,12 @@ public class AuthTests : IClassFixture<WebApplicationFactory<Program>>
                 services.AddDbContext<ApplicationDbContext>(options =>
                     options.UseInMemoryDatabase("TestDb"));
             });
-        }).CreateClient();
+        });
 
-        // Ensure in-memory database schema is created
-        var scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
-        using var scope = scopeFactory.CreateScope();
+        _client = customFactory.CreateClient();
+
+        // Ensure in-memory database schema is created using the configured factory
+        using var scope = customFactory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         db.Database.EnsureCreated();
     }
@@ -73,6 +76,45 @@ public class AuthTests : IClassFixture<WebApplicationFactory<Program>>
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Contains("accessToken", body);
+    }
+
+    [Fact]
+    public async Task GetMe_WithValidToken_ReturnsUserData()
+    {
+        // Register and login to get a token
+        await _client.PostAsJsonAsync("/register", new
+        {
+            email = "me@example.com",
+            password = "Test123!"
+        });
+
+        var loginResponse = await _client.PostAsJsonAsync("/login", new
+        {
+            email = "me@example.com",
+            password = "Test123!"
+        });
+
+        var loginBody = await loginResponse.Content.ReadAsStringAsync();
+        var token = JsonDocument.Parse(loginBody).RootElement
+            .GetProperty("accessToken").GetString();
+
+        // Call protected endpoint with Bearer token
+        var request = new HttpRequestMessage(HttpMethod.Get, "/api/users/me");
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        var response = await _client.SendAsync(request);
+
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Contains("me@example.com", body);
+    }
+
+    [Fact]
+    public async Task GetMe_WithoutToken_ReturnsUnauthorized()
+    {
+        var response = await _client.GetAsync("/api/users/me");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     [Fact]
