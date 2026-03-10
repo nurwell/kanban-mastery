@@ -8,8 +8,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 
 // Register services
-// BUG: Registering the concrete type only — interface is not mapped
-builder.Services.AddSingleton<BoardService>();
+builder.Services.AddSingleton<IBoardService, BoardService>();
 
 var app = builder.Build();
 
