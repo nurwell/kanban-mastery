@@ -17,6 +17,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
+// Register authorization
+builder.Services.AddAuthorization();
+
 // Register application services
 builder.Services.AddSingleton<IBoardService, BoardService>();
 
@@ -30,8 +33,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapIdentityApi<ApplicationUser>();
 
+app.MapUserEndpoints();
 app.MapBoardEndpoints();
 
 app.Run();
