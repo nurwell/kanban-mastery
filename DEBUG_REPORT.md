@@ -79,3 +79,19 @@ The interface is the contract. The concrete class is the implementation. The con
 ## Key Takeaway
 
 Always register services using the interface as the first type argument when your endpoints and services depend on interfaces, not concrete types. This is not just a DI technicality — it is what makes mocking and unit testing possible: you can swap `BoardService` for a `MockBoardService` in tests without touching a single endpoint.
+
+---
+
+## AI Collaboration Reflection
+
+### How AI Was Used in This Exercise
+
+The structured debug prompt in the Diagnosis section above was formed with Claude Code. I provided the exact error message, the broken registration line, and the endpoint code, then asked for an explanation of what went wrong and why.
+
+### What the AI Did Well
+
+Claude identified the root cause immediately: the DI container has no entry for `IBoardService` because only `BoardService` was registered as a concrete type. It explained the container-as-dictionary metaphor clearly and correctly identified why `dotnet build` succeeds while the first HTTP request crashes — a subtle distinction that is easy to miss.
+
+### Where I Intervened
+
+The AI's fix was one correct line. My intervention was in understanding and documenting it: I elevated the observation that this failure is **runtime-only, first-request-only** — the compiler cannot catch DI registration mismatches. The AI mentioned it briefly; I made it the central point because it is the most practically important thing to retain from this exercise. The "Key Takeaway" framing (interface as contract, concrete type as implementation, testability via swapping) is my own restructuring of the AI's more technical explanation into something more useful for future reference.
