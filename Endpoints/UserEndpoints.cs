@@ -1,6 +1,5 @@
 using System.Security.Claims;
-using KanbanApi.Data;
-using Microsoft.AspNetCore.Http.HttpResults;
+using KanbanApi.Services;
 
 namespace KanbanApi.Endpoints
 {
@@ -8,19 +7,15 @@ namespace KanbanApi.Endpoints
     {
         public static void MapUserEndpoints(this IEndpointRouteBuilder routes)
         {
-            routes.MapGet("/api/users/me", async (ClaimsPrincipal user, ApplicationDbContext db) =>
+            routes.MapGet("/api/users/me", async (ClaimsPrincipal user, IUserService userService) =>
             {
                 var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
-                var appUser = await db.Users.FindAsync(userId);
+                if (userId is null) return Results.Unauthorized();
 
-                if (appUser is null) return Results.NotFound();
+                var profile = await userService.GetUserProfileAsync(userId);
+                if (profile is null) return Results.NotFound();
 
-                return Results.Ok(new
-                {
-                    appUser.Id,
-                    appUser.UserName,
-                    appUser.Email
-                });
+                return Results.Ok(profile);
             })
             .RequireAuthorization()
             .WithName("GetCurrentUser");

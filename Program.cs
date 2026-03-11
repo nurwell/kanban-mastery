@@ -22,6 +22,7 @@ builder.Services.AddAuthorization();
 
 // Register application services
 builder.Services.AddSingleton<IBoardService, BoardService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 var app = builder.Build();
 
