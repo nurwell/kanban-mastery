@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using KanbanApi.Models;
 using KanbanApi.Services;
 
@@ -7,7 +8,7 @@ namespace KanbanApi.Endpoints
     {
         public static void MapBoardEndpoints(this IEndpointRouteBuilder routes)
         {
-            var group = routes.MapGroup("/boards");
+            var group = routes.MapGroup("/api/boards");
 
             group.MapGet("/", async (string userId, IBoardService boardService) =>
             {
@@ -22,12 +23,21 @@ namespace KanbanApi.Endpoints
             })
             .WithName("GetBoardById");
 
-            group.MapPost("/", async (Board board, IBoardService boardService) =>
+            group.MapPost("/", async (CreateBoardRequest request, ClaimsPrincipal user, IDbBoardService dbBoardService) =>
             {
-                var createdBoard = await boardService.CreateAsync(board);
-                if (createdBoard is null) return Results.BadRequest("Could not create board.");
-                return Results.Created($"/boards/{createdBoard.Id}", createdBoard);
+                var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId is null) return Results.Unauthorized();
+
+                var board = await dbBoardService.CreateBoardAsync(request.BoardName, userId);
+                return Results.Created($"/api/boards/{board.Id}", new
+                {
+                    board.Id,
+                    board.Name,
+                    board.OwnerId,
+                    board.CreatedAt
+                });
             })
+            .RequireAuthorization()
             .WithName("CreateBoard");
 
             group.MapPut("/{id}", async (int id, Board board, IBoardService boardService) =>
