@@ -39,5 +39,38 @@ namespace KanbanApi.Services
             _db.BoardMembers.Add(member);
             await _db.SaveChangesAsync();
         }
+
+        public async Task<Column> CreateColumnAsync(int boardId, string title, int? position)
+        {
+            var pos = position ?? await _db.Columns.CountAsync(c => c.BoardId == boardId);
+            var column = new Column { BoardId = boardId, Title = title, Position = pos };
+            _db.Columns.Add(column);
+            await _db.SaveChangesAsync();
+            return column;
+        }
+
+        public async Task<Column?> UpdateColumnAsync(int boardId, int columnId, string title)
+        {
+            var column = await _db.Columns.FirstOrDefaultAsync(c => c.Id == columnId && c.BoardId == boardId);
+            if (column is null) return null;
+
+            column.Title = title;
+            await _db.SaveChangesAsync();
+            return column;
+        }
+
+        public async Task<DeleteColumnResult> DeleteColumnAsync(int boardId, int columnId)
+        {
+            var column = await _db.Columns
+                .Include(c => c.Cards)
+                .FirstOrDefaultAsync(c => c.Id == columnId && c.BoardId == boardId);
+
+            if (column is null) return DeleteColumnResult.NotFound;
+            if (column.Cards.Count > 0) return DeleteColumnResult.HasCards;
+
+            _db.Columns.Remove(column);
+            await _db.SaveChangesAsync();
+            return DeleteColumnResult.Deleted;
+        }
     }
 }
