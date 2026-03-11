@@ -1,9 +1,7 @@
 using System.Security.Claims;
-using KanbanApi.Data;
 using KanbanApi.Models;
 using KanbanApi.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
 
 namespace KanbanApi.Endpoints
 {
@@ -23,15 +21,12 @@ namespace KanbanApi.Endpoints
                 int boardId,
                 ClaimsPrincipal user,
                 IAuthorizationService authService,
-                ApplicationDbContext db) =>
+                IDbBoardService dbBoardService) =>
             {
                 var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
                 if (!authResult.Succeeded) return Results.Forbid();
 
-                var board = await db.Boards
-                    .Include(b => b.Columns)
-                        .ThenInclude(c => c.Cards)
-                    .FirstOrDefaultAsync(b => b.Id == boardId);
+                var board = await dbBoardService.GetBoardAsync(boardId);
 
                 if (board is null) return Results.NotFound();
 
@@ -102,14 +97,12 @@ namespace KanbanApi.Endpoints
                 AddMemberRequest request,
                 ClaimsPrincipal user,
                 IAuthorizationService authService,
-                ApplicationDbContext db) =>
+                IDbBoardService dbBoardService) =>
             {
                 var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardOwner");
                 if (!authResult.Succeeded) return Results.Forbid();
 
-                var member = new BoardMember { BoardId = boardId, UserId = request.UserId, Role = "Member" };
-                db.BoardMembers.Add(member);
-                await db.SaveChangesAsync();
+                await dbBoardService.AddMemberAsync(boardId, request.UserId);
 
                 return Results.Created($"/api/boards/{boardId}/members/{request.UserId}", new
                 {
