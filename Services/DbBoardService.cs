@@ -1,5 +1,6 @@
 using KanbanApi.Data;
 using KanbanApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace KanbanApi.Services
 {
@@ -22,6 +23,21 @@ namespace KanbanApi.Services
             await _db.SaveChangesAsync();
 
             return board;
+        }
+
+        public async Task<Board?> GetBoardAsync(int boardId)
+        {
+            return await _db.Boards
+                .Include(b => b.Columns)
+                    .ThenInclude(c => c.Cards)
+                .FirstOrDefaultAsync(b => b.Id == boardId);
+        }
+
+        public async Task AddMemberAsync(int boardId, string userId)
+        {
+            var member = new BoardMember { BoardId = boardId, UserId = userId, Role = "Member" };
+            _db.BoardMembers.Add(member);
+            await _db.SaveChangesAsync();
         }
     }
 }
