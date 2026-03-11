@@ -40,6 +40,11 @@ namespace KanbanApi.Services
             await _db.SaveChangesAsync();
         }
 
+        public async Task<bool> IsMemberAsync(int boardId, string userId)
+        {
+            return await _db.BoardMembers.AnyAsync(bm => bm.BoardId == boardId && bm.UserId == userId);
+        }
+
         public async Task<Board?> UpdateBoardAsync(int boardId, string name)
         {
             var board = await _db.Boards.FindAsync(boardId);

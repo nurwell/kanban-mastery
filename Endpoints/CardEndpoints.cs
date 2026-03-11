@@ -1,11 +1,13 @@
 using System.Security.Claims;
 using KanbanApi.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace KanbanApi.Endpoints
 {
     public record CreateCardDto(string Title, string? Description, int ColumnId);
     public record UpdateCardDto(string Title, string? Description, int ColumnId);
+    public record AssignCardDto(string UserId);
 
     public static class CardEndpoints
     {
@@ -77,6 +79,37 @@ namespace KanbanApi.Endpoints
                 return deleted ? Results.NoContent() : Results.NotFound();
             })
             .WithName("DeleteCard");
+
+            group.MapPut("/{cardId}/assign", async (
+                int boardId,
+                int cardId,
+                AssignCardDto dto,
+                ClaimsPrincipal user,
+                IAuthorizationService authService,
+                IDbBoardService boardService,
+                ICardService cardService) =>
+            {
+                var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
+                if (!authResult.Succeeded) return Results.Forbid();
+
+                var isMember = await boardService.IsMemberAsync(boardId, dto.UserId);
+                if (!isMember)
+                    return Results.BadRequest("User is not a board member");
+
+                var card = await cardService.AssignCardAsync(boardId, cardId, dto.UserId);
+                if (card is null) return Results.NotFound();
+
+                return Results.Ok(new
+                {
+                    card.Id,
+                    card.Title,
+                    card.Description,
+                    card.ColumnId,
+                    card.AssignedToUserId,
+                    card.CreatedAt
+                });
+            })
+            .WithName("AssignCard");
         }
     }
 }
