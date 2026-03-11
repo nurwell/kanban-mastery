@@ -77,19 +77,37 @@ namespace KanbanApi.Endpoints
             .RequireAuthorization()
             .WithName("CreateBoard");
 
-            group.MapPut("/{id}", async (int id, Board board, IBoardService boardService) =>
+            group.MapPut("/{boardId}", async (
+                int boardId,
+                UpdateBoardRequest request,
+                ClaimsPrincipal user,
+                IAuthorizationService authService,
+                IDbBoardService dbBoardService) =>
             {
-                if (id != board.Id) return Results.BadRequest("Mismatched Board ID.");
-                var updated = await boardService.UpdateAsync(board);
-                return updated is not null ? Results.Ok(updated) : Results.NotFound();
+                var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardOwner");
+                if (!authResult.Succeeded) return Results.Forbid();
+
+                var board = await dbBoardService.UpdateBoardAsync(boardId, request.Name);
+                if (board is null) return Results.NotFound();
+
+                return Results.Ok(new { board.Id, board.Name, board.OwnerId, board.CreatedAt });
             })
+            .RequireAuthorization()
             .WithName("UpdateBoard");
 
-            group.MapDelete("/{id}", async (int id, IBoardService boardService) =>
+            group.MapDelete("/{boardId}", async (
+                int boardId,
+                ClaimsPrincipal user,
+                IAuthorizationService authService,
+                IDbBoardService dbBoardService) =>
             {
-                var success = await boardService.DeleteAsync(id);
-                return success ? Results.NoContent() : Results.NotFound();
+                var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardOwner");
+                if (!authResult.Succeeded) return Results.Forbid();
+
+                var deleted = await dbBoardService.DeleteBoardAsync(boardId);
+                return deleted ? Results.NoContent() : Results.NotFound();
             })
+            .RequireAuthorization()
             .WithName("DeleteBoard");
 
             group.MapPost("/{boardId}/members", async (

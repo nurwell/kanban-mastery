@@ -55,7 +55,8 @@ namespace KanbanApi.Data
 
                 entity.HasOne(bm => bm.Board)
                     .WithMany(b => b.BoardMembers)
-                    .HasForeignKey(bm => bm.BoardId);
+                    .HasForeignKey(bm => bm.BoardId)
+                    .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(bm => bm.ApplicationUser)
                     .WithMany(u => u.BoardMembers)
