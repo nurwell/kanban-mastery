@@ -40,6 +40,26 @@ namespace KanbanApi.Services
             await _db.SaveChangesAsync();
         }
 
+        public async Task<Board?> UpdateBoardAsync(int boardId, string name)
+        {
+            var board = await _db.Boards.FindAsync(boardId);
+            if (board is null) return null;
+
+            board.Name = name;
+            await _db.SaveChangesAsync();
+            return board;
+        }
+
+        public async Task<bool> DeleteBoardAsync(int boardId)
+        {
+            var board = await _db.Boards.FindAsync(boardId);
+            if (board is null) return false;
+
+            _db.Boards.Remove(board);
+            await _db.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<Column> CreateColumnAsync(int boardId, string title, int? position)
         {
             var pos = position ?? await _db.Columns.CountAsync(c => c.BoardId == boardId);
