@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using KanbanApi.Data;
 using KanbanApi.Models;
 using KanbanApi.Services;
+using Microsoft.AspNetCore.Authorization;
 
 namespace KanbanApi.Endpoints
 {
@@ -54,6 +56,30 @@ namespace KanbanApi.Endpoints
                 return success ? Results.NoContent() : Results.NotFound();
             })
             .WithName("DeleteBoard");
+
+            group.MapPost("/{boardId}/members", async (
+                int boardId,
+                AddMemberRequest request,
+                ClaimsPrincipal user,
+                IAuthorizationService authService,
+                ApplicationDbContext db) =>
+            {
+                var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardOwner");
+                if (!authResult.Succeeded) return Results.Forbid();
+
+                var member = new BoardMember { BoardId = boardId, UserId = request.UserId, Role = "Member" };
+                db.BoardMembers.Add(member);
+                await db.SaveChangesAsync();
+
+                return Results.Created($"/api/boards/{boardId}/members/{request.UserId}", new
+                {
+                    boardId,
+                    request.UserId,
+                    Role = "Member"
+                });
+            })
+            .RequireAuthorization()
+            .WithName("AddBoardMember");
         }
     }
 }
