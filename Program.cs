@@ -52,6 +52,7 @@ app.MapIdentityApi<ApplicationUser>();
 
 app.MapUserEndpoints();
 app.MapBoardEndpoints();
+app.MapColumnEndpoints();
 
 app.Run();
 
