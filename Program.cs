@@ -1,7 +1,9 @@
+using KanbanApi.Authorization;
 using KanbanApi.Data;
 using KanbanApi.Endpoints;
 using KanbanApi.Models;
 using KanbanApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -18,7 +20,12 @@ builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 // Register authorization
-builder.Services.AddAuthorization();
+builder.Services.AddScoped<IAuthorizationHandler, IsBoardOwnerHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("IsBoardOwner", policy =>
+        policy.Requirements.Add(new IsBoardOwnerRequirement()));
+});
 
 // Register application services
 builder.Services.AddSingleton<IBoardService, BoardService>();
