@@ -34,6 +34,7 @@ builder.Services.AddAuthorization(options =>
 builder.Services.AddSingleton<IBoardService, BoardService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDbBoardService, DbBoardService>();
+builder.Services.AddScoped<ICardService, CardService>();
 
 var app = builder.Build();
 
@@ -53,6 +54,7 @@ app.MapIdentityApi<ApplicationUser>();
 app.MapUserEndpoints();
 app.MapBoardEndpoints();
 app.MapColumnEndpoints();
+app.MapCardEndpoints();
 
 app.Run();
 
