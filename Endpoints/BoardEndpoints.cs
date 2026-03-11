@@ -3,6 +3,7 @@ using KanbanApi.Data;
 using KanbanApi.Models;
 using KanbanApi.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
 
 namespace KanbanApi.Endpoints
 {
@@ -18,11 +19,50 @@ namespace KanbanApi.Endpoints
             })
             .WithName("GetBoards");
 
-            group.MapGet("/{id}", async (int id, IBoardService boardService) =>
+            group.MapGet("/{boardId}", async (
+                int boardId,
+                ClaimsPrincipal user,
+                IAuthorizationService authService,
+                ApplicationDbContext db) =>
             {
-                var board = await boardService.GetByIdAsync(id);
-                return board is not null ? Results.Ok(board) : Results.NotFound();
+                var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
+                if (!authResult.Succeeded) return Results.Forbid();
+
+                var board = await db.Boards
+                    .Include(b => b.Columns)
+                        .ThenInclude(c => c.Cards)
+                    .FirstOrDefaultAsync(b => b.Id == boardId);
+
+                if (board is null) return Results.NotFound();
+
+                return Results.Ok(new
+                {
+                    board.Id,
+                    board.Name,
+                    board.OwnerId,
+                    board.CreatedAt,
+                    Columns = board.Columns
+                        .OrderBy(c => c.Position)
+                        .Select(c => new
+                        {
+                            c.Id,
+                            c.Title,
+                            c.Position,
+                            Cards = c.Cards
+                                .OrderBy(card => card.Position)
+                                .Select(card => new
+                                {
+                                    card.Id,
+                                    card.Title,
+                                    card.Description,
+                                    card.Position,
+                                    card.CreatedAt,
+                                    card.AssignedToUserId
+                                })
+                        })
+                });
             })
+            .RequireAuthorization()
             .WithName("GetBoardById");
 
             group.MapPost("/", async (CreateBoardRequest request, ClaimsPrincipal user, IDbBoardService dbBoardService) =>
