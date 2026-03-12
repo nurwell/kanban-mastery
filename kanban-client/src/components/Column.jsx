@@ -1,0 +1,87 @@
+import { useState } from 'react';
+import { Droppable } from '@hello-pangea/dnd';
+import Card from './Card';
+
+export default function Column({ id, title, cards, onCreateCard }) {
+  const [adding, setAdding] = useState(false);
+  const [title_, setTitle_] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!title_.trim()) return;
+    setLoading(true);
+    await onCreateCard(id, title_.trim());
+    setTitle_('');
+    setAdding(false);
+    setLoading(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Escape') {
+      setAdding(false);
+      setTitle_('');
+    }
+  };
+
+  return (
+    <div className="column">
+      <h2 className="column-title">{title}</h2>
+
+      <Droppable droppableId={id.toString()}>
+        {(provided) => (
+          <div
+            className="card-stack"
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+          >
+            {cards.length === 0 && !adding && (
+              <p className="column-empty">No cards</p>
+            )}
+            {cards.map((card, index) => (
+              <Card
+                key={card.id}
+                id={card.id}
+                index={index}
+                title={card.title}
+                description={card.description}
+                assignedToUserId={card.assignedToUserId}
+              />
+            ))}
+            {provided.placeholder}
+          </div>
+        )}
+      </Droppable>
+
+      {adding ? (
+        <form className="add-card-form" onSubmit={handleSubmit}>
+          <input
+            type="text"
+            className="add-card-input"
+            placeholder="Card title…"
+            value={title_}
+            onChange={(e) => setTitle_(e.target.value)}
+            onKeyDown={handleKeyDown}
+            autoFocus
+          />
+          <div className="add-card-actions">
+            <button type="submit" disabled={loading || !title_.trim()}>
+              {loading ? 'Adding…' : 'Add card'}
+            </button>
+            <button
+              type="button"
+              className="btn-secondary"
+              onClick={() => { setAdding(false); setTitle_(''); }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button className="add-card-btn" onClick={() => setAdding(true)}>
+          + Add card
+        </button>
+      )}
+    </div>
+  );
+}

@@ -1,5 +1,7 @@
 using System.Security.Claims;
+using KanbanApi.Models;
 using KanbanApi.Services;
+using Microsoft.AspNetCore.Identity;
 
 namespace KanbanApi.Endpoints
 {
@@ -19,6 +21,18 @@ namespace KanbanApi.Endpoints
             })
             .RequireAuthorization()
             .WithName("GetCurrentUser");
+
+            routes.MapGet("/api/users/lookup", async (
+                string email,
+                UserManager<ApplicationUser> userManager) =>
+            {
+                var user = await userManager.FindByEmailAsync(email);
+                if (user is null) return Results.NotFound(new { message = "No user found with that email" });
+
+                return Results.Ok(new { id = user.Id, email = user.Email });
+            })
+            .RequireAuthorization()
+            .WithName("LookupUserByEmail");
         }
     }
 }
