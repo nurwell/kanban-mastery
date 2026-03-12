@@ -151,7 +151,16 @@ button:focus, button:focus-visible { outline: 4px auto -webkit-focus-ring-color;
 }
 .back-link { font-size: 0.9em; opacity: 0.7; white-space: nowrap; }
 .back-link:hover { opacity: 1; }
-.board-page-title { font-size: 1.4em; margin: 0; }
+.board-page-title { font-size: 1.4em; margin: 0; flex: 1; }
+.invite-btn {
+  font-size: 0.85em;
+  padding: 0.4em 1em;
+  background-color: #646cff;
+  border-color: #646cff;
+  color: #fff;
+  margin-left: auto;
+}
+.invite-btn:hover { background-color: #535bf2; border-color: #535bf2; }
 .columns-container {
   display: flex;
   gap: 1rem;
@@ -224,9 +233,94 @@ button:focus, button:focus-visible { outline: 4px auto -webkit-focus-ring-color;
   cursor: default;
 }
 
+/* ── Add card form ── */
+.add-card-btn {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 0.5em 0.75em;
+  font-size: 0.85em;
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 0.15s, border-color 0.15s;
+}
+.add-card-btn:hover { opacity: 1; border-color: #646cff; }
+.add-card-form { display: flex; flex-direction: column; gap: 0.4rem; }
+.add-card-input {
+  padding: 0.5em 0.75em;
+  border-radius: 6px;
+  border: 1px solid #555;
+  background-color: #1e1e2a;
+  color: inherit;
+  font-size: 0.9em;
+  font-family: inherit;
+}
+.add-card-input:focus { outline: 2px solid #646cff; border-color: transparent; }
+.add-card-actions { display: flex; gap: 0.4rem; }
+.add-card-actions button { font-size: 0.85em; padding: 0.4em 0.8em; }
+
+/* ── Shared secondary button ── */
+.btn-secondary {
+  background-color: transparent;
+  border-color: rgba(255, 255, 255, 0.2);
+  color: inherit;
+  opacity: 0.7;
+}
+.btn-secondary:hover { border-color: rgba(255, 255, 255, 0.5); opacity: 1; }
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal {
+  background-color: #1e1e2a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 1.75rem;
+  width: 100%;
+  max-width: 420px;
+  outline: none;
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+.modal-title { font-size: 1.1em; font-weight: 600; margin: 0; }
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5em;
+  line-height: 1;
+  opacity: 0.5;
+  cursor: pointer;
+  padding: 0;
+}
+.modal-close:hover { opacity: 1; }
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+.invite-success { color: #34d399; font-size: 0.9em; margin: 0.25rem 0; }
+
 @media (prefers-color-scheme: light) {
   .column { background-color: #f3f4f6; }
   .card { background-color: #fff; border-color: #e5e7eb; }
   .card:hover { border-color: rgba(100, 108, 255, 0.5); }
   .create-board-form input { border-color: #ddd; }
+  .add-card-btn { border-color: rgba(0, 0, 0, 0.2); }
+  .add-card-input { background-color: #fff; border-color: #ccc; }
+  .modal { background-color: #fff; border-color: #e5e7eb; }
+  .btn-secondary { border-color: rgba(0, 0, 0, 0.2); }
 }
