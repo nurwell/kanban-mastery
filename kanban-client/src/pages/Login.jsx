@@ -25,6 +25,7 @@ export default function Login() {
   };
 
   return (
+    <div className="auth-wrapper">
     <div className="auth-container">
       <h1>Sign in</h1>
       <form onSubmit={handleSubmit}>
@@ -58,6 +59,7 @@ export default function Login() {
       <p>
         No account? <Link to="/register">Register</Link>
       </p>
+    </div>
     </div>
   );
 }

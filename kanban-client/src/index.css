@@ -24,9 +24,14 @@ a:hover {
 
 body {
   margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+/* Center auth forms vertically */
+.auth-wrapper {
   display: flex;
   place-items: center;
-  min-width: 320px;
   min-height: 100vh;
 }
 
@@ -121,4 +126,82 @@ button:focus-visible {
   color: #f87171;
   font-size: 0.9em;
   margin: 0.25rem 0;
+}
+
+/* Dashboard */
+.dashboard {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+  font-size: 1.8em;
+  margin: 0;
+}
+
+.logout-btn {
+  font-size: 0.85em;
+  padding: 0.4em 0.9em;
+  opacity: 0.7;
+}
+
+.board-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.board-card {
+  display: block;
+  padding: 1.25rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #444;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.board-card:hover {
+  border-color: #646cff;
+  background-color: rgba(100, 108, 255, 0.08);
+}
+
+.board-name {
+  font-weight: 500;
+}
+
+.status-message {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.95em;
+}
+
+.empty-state {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.95em;
+}
+
+.empty-state p {
+  margin: 0.25rem 0;
+}
+
+@media (prefers-color-scheme: light) {
+  .board-card {
+    border-color: #ddd;
+  }
+  .status-message,
+  .empty-state {
+    color: rgba(0, 0, 0, 0.45);
+  }
 }

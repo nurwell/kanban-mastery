@@ -27,6 +27,7 @@ export default function Register() {
   };
 
   return (
+    <div className="auth-wrapper">
     <div className="auth-container">
       <h1>Create account</h1>
       <form onSubmit={handleSubmit}>
@@ -71,6 +72,7 @@ export default function Register() {
       <p>
         Already have an account? <Link to="/login">Sign in</Link>
       </p>
+    </div>
     </div>
   );
 }
