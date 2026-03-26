@@ -13,6 +13,15 @@ namespace KanbanApi.Services
             _db = db;
         }
 
+        public async Task<List<Board>> GetBoardsAsync(string userId)
+        {
+            return await _db.BoardMembers
+                .Where(m => m.UserId == userId)
+                .Include(m => m.Board)
+                .Select(m => m.Board)
+                .ToListAsync();
+        }
+
         public async Task<Board> CreateBoardAsync(string name, string userId)
         {
             var board = new Board { Name = name, OwnerId = userId };

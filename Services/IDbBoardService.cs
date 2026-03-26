@@ -4,6 +4,7 @@ namespace KanbanApi.Services
 {
     public interface IDbBoardService
     {
+        Task<List<Board>> GetBoardsAsync(string userId);
         Task<Board> CreateBoardAsync(string name, string userId);
         Task<Board?> GetBoardAsync(int boardId);
         Task AddMemberAsync(int boardId, string userId);
