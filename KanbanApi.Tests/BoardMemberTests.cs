@@ -63,7 +63,7 @@ public class BoardMemberTests : IClassFixture<WebApplicationFactory<Program>>
     {
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/boards");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        request.Content = JsonContent.Create(new { boardName });
+        request.Content = JsonContent.Create(new { name = boardName });
         var response = await _client.SendAsync(request);
         var body = await response.Content.ReadAsStringAsync();
         return JsonDocument.Parse(body).RootElement.GetProperty("id").GetInt32();
