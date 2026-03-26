@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { Droppable } from '@hello-pangea/dnd';
 import Card from './Card';
 
-export default function Column({ id, title, cards, onCreateCard }) {
+export default function Column({ id, title, cards, onCreateCard, onDeleteCard, onUpdateCard, onDeleteColumn, onRenameColumn }) {
   const [adding, setAdding] = useState(false);
   const [title_, setTitle_] = useState('');
   const [loading, setLoading] = useState(false);
+  const [renamingCol, setRenamingCol] = useState(false);
+  const [colTitle, setColTitle] = useState(title);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,9 +26,33 @@ export default function Column({ id, title, cards, onCreateCard }) {
     }
   };
 
+  const handleRenameBlur = async () => {
+    const trimmed = colTitle.trim();
+    if (!trimmed || trimmed === title) { setRenamingCol(false); setColTitle(title); return; }
+    await onRenameColumn(id, trimmed);
+    setRenamingCol(false);
+  };
+
   return (
     <div className="column">
-      <h2 className="column-title">{title}</h2>
+      <div className="column-header">
+        {renamingCol ? (
+          <input
+            className="column-rename-input"
+            value={colTitle}
+            onChange={(e) => setColTitle(e.target.value)}
+            onBlur={handleRenameBlur}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRenameBlur();
+              if (e.key === 'Escape') { setRenamingCol(false); setColTitle(title); }
+            }}
+            autoFocus
+          />
+        ) : (
+          <h2 className="column-title" onClick={() => setRenamingCol(true)} title="Click to rename">{title}</h2>
+        )}
+        <button className="column-delete-btn" onClick={() => onDeleteColumn(id)} title="Delete column">×</button>
+      </div>
 
       <Droppable droppableId={id.toString()}>
         {(provided) => (
@@ -46,6 +72,8 @@ export default function Column({ id, title, cards, onCreateCard }) {
                 title={card.title}
                 description={card.description}
                 assignedToUserId={card.assignedToUserId}
+                onDelete={onDeleteCard}
+                onUpdate={onUpdateCard}
               />
             ))}
             {provided.placeholder}

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Draggable } from '@hello-pangea/dnd';
 
 function avatarColor(userId) {
@@ -16,7 +17,17 @@ function avatarLabel(userId) {
   return userId.slice(0, 2).toUpperCase();
 }
 
-export default function Card({ id, index, title, description, assignedToUserId }) {
+export default function Card({ id, index, title, description, assignedToUserId, onDelete, onUpdate }) {
+  const [editing, setEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(title);
+
+  const handleSave = async () => {
+    const trimmed = editTitle.trim();
+    if (!trimmed || trimmed === title) { setEditing(false); setEditTitle(title); return; }
+    await onUpdate(id, trimmed, description);
+    setEditing(false);
+  };
+
   return (
     <Draggable draggableId={id.toString()} index={index}>
       {(provided, snapshot) => (
@@ -26,7 +37,21 @@ export default function Card({ id, index, title, description, assignedToUserId }
           {...provided.draggableProps}
           {...provided.dragHandleProps}
         >
-          <p className="card-title">{title}</p>
+          {editing ? (
+            <input
+              className="card-edit-input"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              onBlur={handleSave}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSave();
+                if (e.key === 'Escape') { setEditing(false); setEditTitle(title); }
+              }}
+              autoFocus
+            />
+          ) : (
+            <p className="card-title" onClick={() => setEditing(true)} title="Click to edit">{title}</p>
+          )}
           {description && <p className="card-description">{description}</p>}
           {assignedToUserId && (
             <div
@@ -37,6 +62,13 @@ export default function Card({ id, index, title, description, assignedToUserId }
               {avatarLabel(assignedToUserId)}
             </div>
           )}
+          <button
+            className="card-delete-btn"
+            onClick={() => onDelete(id)}
+            title="Delete card"
+          >
+            ×
+          </button>
         </div>
       )}
     </Draggable>

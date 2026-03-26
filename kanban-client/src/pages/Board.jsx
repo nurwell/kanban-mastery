@@ -85,6 +85,55 @@ export default function Board() {
     }));
   };
 
+  // ── Update card ───────────────────────────────────────────────────
+  const handleUpdateCard = async (cardId, title, description) => {
+    const col = board.columns.find((c) => c.cards.some((card) => card.id === cardId));
+    if (!col) return;
+    await api.put(`/api/boards/${boardId}/cards/${cardId}`, { title, description, columnId: col.id });
+    setBoard((prev) => ({
+      ...prev,
+      columns: prev.columns.map((c) => ({
+        ...c,
+        cards: c.cards.map((card) => card.id === cardId ? { ...card, title, description } : card),
+      })),
+    }));
+  };
+
+  // ── Delete card ───────────────────────────────────────────────────
+  const handleDeleteCard = async (cardId) => {
+    await api.delete(`/api/boards/${boardId}/cards/${cardId}`);
+    setBoard((prev) => ({
+      ...prev,
+      columns: prev.columns.map((col) => ({
+        ...col,
+        cards: col.cards.filter((card) => card.id !== cardId),
+      })),
+    }));
+  };
+
+  // ── Rename column ─────────────────────────────────────────────────
+  const handleRenameColumn = async (columnId, title) => {
+    await api.put(`/api/boards/${boardId}/columns/${columnId}`, { title });
+    setBoard((prev) => ({
+      ...prev,
+      columns: prev.columns.map((col) => col.id === columnId ? { ...col, title } : col),
+    }));
+  };
+
+  // ── Delete column ─────────────────────────────────────────────────
+  const handleDeleteColumn = async (columnId) => {
+    try {
+      await api.delete(`/api/boards/${boardId}/columns/${columnId}`);
+      setBoard((prev) => ({
+        ...prev,
+        columns: prev.columns.filter((col) => col.id !== columnId),
+      }));
+    } catch (err) {
+      const msg = err.response?.data ?? 'Cannot delete column';
+      setDragError(msg);
+    }
+  };
+
   return (
     <div className="board-page">
       <header className="board-header">
@@ -114,6 +163,10 @@ export default function Board() {
                 title={col.title}
                 cards={col.cards}
                 onCreateCard={handleCreateCard}
+                onDeleteCard={handleDeleteCard}
+                onUpdateCard={handleUpdateCard}
+                onDeleteColumn={handleDeleteColumn}
+                onRenameColumn={handleRenameColumn}
               />
             ))}
             <div className="add-column-form">
