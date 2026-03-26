@@ -12,6 +12,8 @@ export default function Board() {
   const [error, setError] = useState('');
   const [dragError, setDragError] = useState('');
   const [inviteOpen, setInviteOpen] = useState(false);
+  const [newColTitle, setNewColTitle] = useState('');
+  const [addingCol, setAddingCol] = useState(false);
 
   useEffect(() => {
     api.get(`/api/boards/${boardId}`)
@@ -52,6 +54,20 @@ export default function Board() {
     } catch {
       setBoard(originalBoard);
       setDragError('Failed to move card. Change reverted.');
+    }
+  };
+
+  // ── Create column ────────────────────────────────────────────────
+  const handleCreateColumn = async (e) => {
+    e.preventDefault();
+    if (!newColTitle.trim()) return;
+    setAddingCol(true);
+    try {
+      const res = await api.post(`/api/boards/${boardId}/columns`, { title: newColTitle.trim() });
+      setBoard((prev) => ({ ...prev, columns: [...prev.columns, { ...res.data, cards: [] }] }));
+      setNewColTitle('');
+    } finally {
+      setAddingCol(false);
     }
   };
 
@@ -100,6 +116,19 @@ export default function Board() {
                 onCreateCard={handleCreateCard}
               />
             ))}
+            <div className="add-column-form">
+              <form onSubmit={handleCreateColumn}>
+                <input
+                  type="text"
+                  placeholder="New column title…"
+                  value={newColTitle}
+                  onChange={(e) => setNewColTitle(e.target.value)}
+                />
+                <button type="submit" disabled={addingCol || !newColTitle.trim()}>
+                  {addingCol ? 'Adding…' : '+ Add Column'}
+                </button>
+              </form>
+            </div>
           </div>
         </DragDropContext>
       )}
