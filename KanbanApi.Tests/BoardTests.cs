@@ -58,7 +58,7 @@ public class BoardTests : IClassFixture<WebApplicationFactory<Program>>
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/boards");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-        request.Content = JsonContent.Create(new { boardName = "My Test Board" });
+        request.Content = JsonContent.Create(new { name = "My Test Board" });
 
         // Act
         var response = await _client.SendAsync(request);
@@ -87,7 +87,7 @@ public class BoardTests : IClassFixture<WebApplicationFactory<Program>>
     [Fact]
     public async Task CreateBoard_WithoutToken_ReturnsUnauthorized()
     {
-        var response = await _client.PostAsJsonAsync("/api/boards", new { boardName = "Unauthorized Board" });
+        var response = await _client.PostAsJsonAsync("/api/boards", new { name = "Unauthorized Board" });
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
