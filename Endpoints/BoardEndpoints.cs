@@ -70,7 +70,7 @@ namespace KanbanApi.Endpoints
                 var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (userId is null) return Results.Unauthorized();
 
-                var board = await dbBoardService.CreateBoardAsync(request.BoardName, userId);
+                var board = await dbBoardService.CreateBoardAsync(request.Name, userId);
                 return Results.Created($"/api/boards/{board.Id}", new
                 {
                     board.Id,
