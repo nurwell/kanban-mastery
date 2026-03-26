@@ -1,4 +1,4 @@
 namespace KanbanApi.Models
 {
-    public record CreateBoardRequest(string BoardName);
+    public record CreateBoardRequest(string Name);
 }

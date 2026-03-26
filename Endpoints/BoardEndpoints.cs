@@ -11,10 +11,15 @@ namespace KanbanApi.Endpoints
         {
             var group = routes.MapGroup("/api/boards");
 
-            group.MapGet("/", async (string userId, IBoardService boardService) =>
+            group.MapGet("/", async (ClaimsPrincipal user, IDbBoardService dbBoardService) =>
             {
-                return await boardService.GetAllAsync(userId);
+                var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (userId is null) return Results.Unauthorized();
+
+                var boards = await dbBoardService.GetBoardsAsync(userId);
+                return Results.Ok(boards.Select(b => new { b.Id, b.Name, b.OwnerId, b.CreatedAt }));
             })
+            .RequireAuthorization()
             .WithName("GetBoards");
 
             group.MapGet("/{boardId}", async (
@@ -65,7 +70,7 @@ namespace KanbanApi.Endpoints
                 var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (userId is null) return Results.Unauthorized();
 
-                var board = await dbBoardService.CreateBoardAsync(request.BoardName, userId);
+                var board = await dbBoardService.CreateBoardAsync(request.Name, userId);
                 return Results.Created($"/api/boards/{board.Id}", new
                 {
                     board.Id,
