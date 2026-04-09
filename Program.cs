@@ -5,6 +5,7 @@ using KanbanApi.Models;
 using KanbanApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +35,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.UseSqlite(connectionString);
     else
         options.UseSqlServer(connectionString);
+
+    options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
 });
 
 // Register ASP.NET Core Identity with built-in API endpoints
