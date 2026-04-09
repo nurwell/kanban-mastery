@@ -30,10 +30,13 @@ jobs:
         run: zip -r publish.zip ./publish
 
       - name: Deploy to Azure via Kudu
+        env:
+          KUDU_USER: ${{ secrets.KUDU_USERNAME }}
+          KUDU_PASS: ${{ secrets.KUDU_PASSWORD }}
         run: |
           curl -X POST \
             --fail \
-            --user "${{ secrets.KUDU_USERNAME }}:${{ secrets.KUDU_PASSWORD }}" \
+            --user "${KUDU_USER}:${KUDU_PASS}" \
             --header "Content-Type: application/zip" \
             --data-binary @publish.zip \
             "https://kanban-api-nurwell.scm.azurewebsites.net/api/zipdeploy"
