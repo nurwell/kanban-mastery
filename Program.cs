@@ -1,8 +1,56 @@
+using KanbanApi.Authorization;
+using KanbanApi.Data;
+using KanbanApi.Endpoints;
+using KanbanApi.Models;
+using KanbanApi.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
+
+// Allow React dev server to call the API
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials());
+});
+
+// Register EF Core — SQLite in development, Azure SQL in production
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (builder.Environment.IsDevelopment())
+        options.UseSqlite(connectionString);
+    else
+        options.UseSqlServer(connectionString);
+});
+
+// Register ASP.NET Core Identity with built-in API endpoints
+builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
+    .AddEntityFrameworkStores<ApplicationDbContext>();
+
+// Register authorization
+builder.Services.AddScoped<IAuthorizationHandler, IsBoardOwnerHandler>();
+builder.Services.AddScoped<IAuthorizationHandler, IsBoardMemberHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("IsBoardOwner", policy =>
+        policy.Requirements.Add(new IsBoardOwnerRequirement()));
+    options.AddPolicy("IsBoardMember", policy =>
+        policy.Requirements.Add(new IsBoardMemberRequirement()));
+});
+
+// Register application services
+builder.Services.AddSingleton<IBoardService, BoardService>();
+builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IDbBoardService, DbBoardService>();
+builder.Services.AddScoped<ICardService, CardService>();
 
 var app = builder.Build();
 
@@ -14,28 +62,19 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+app.UseCors("AllowFrontend");
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapIdentityApi<ApplicationUser>();
+
+app.MapUserEndpoints();
+app.MapBoardEndpoints();
+app.MapColumnEndpoints();
+app.MapCardEndpoints();
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
+// Required for WebApplicationFactory in integration tests
+public partial class Program { }
