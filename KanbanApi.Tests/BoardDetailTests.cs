@@ -120,4 +120,34 @@ public class BoardDetailTests : IClassFixture<WebApplicationFactory<Program>>
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetBoard_ByAddedMember_Returns200()
+    {
+        var ownerToken = await RegisterAndLoginAsync("detail-owner3@example.com");
+        var memberToken = await RegisterAndLoginAsync("detail-member@example.com");
+        var boardId = await CreateBoardAsync(ownerToken);
+
+        // get member's userId
+        var meReq = new HttpRequestMessage(HttpMethod.Get, "/api/users/me");
+        meReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", memberToken);
+        var meRes = await _client.SendAsync(meReq);
+        var memberId = JsonDocument.Parse(await meRes.Content.ReadAsStringAsync())
+            .RootElement.GetProperty("id").GetString()!;
+
+        // owner adds member
+        var addReq = new HttpRequestMessage(HttpMethod.Post, $"/api/boards/{boardId}/members");
+        addReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", ownerToken);
+        addReq.Content = JsonContent.Create(new { userId = memberId });
+        await _client.SendAsync(addReq);
+
+        // member accesses board
+        var req = new HttpRequestMessage(HttpMethod.Get, $"/api/boards/{boardId}");
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", memberToken);
+        var res = await _client.SendAsync(req);
+
+        Assert.Equal(HttpStatusCode.OK, res.StatusCode);
+        var doc = JsonDocument.Parse(await res.Content.ReadAsStringAsync()).RootElement;
+        Assert.Equal(boardId, doc.GetProperty("id").GetInt32());
+    }
 }

@@ -134,4 +134,22 @@ public class AuthTests : IClassFixture<WebApplicationFactory<Program>>
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Login_WithWrongPassword_ReturnsUnauthorized()
+    {
+        await _client.PostAsJsonAsync("/register", new
+        {
+            email = "wrongpw@example.com",
+            password = "Test123!"
+        });
+
+        var response = await _client.PostAsJsonAsync("/login", new
+        {
+            email = "wrongpw@example.com",
+            password = "WrongPassword99!"
+        });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 }

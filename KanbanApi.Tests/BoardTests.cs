@@ -91,4 +91,30 @@ public class BoardTests : IClassFixture<WebApplicationFactory<Program>>
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
+
+    [Fact]
+    public async Task GetBoards_ReturnsOnlyUsersBoards()
+    {
+        var tokenA = await RegisterAndLoginAsync("list-userA@example.com");
+        var tokenB = await RegisterAndLoginAsync("list-userB@example.com");
+
+        var reqA = new HttpRequestMessage(HttpMethod.Post, "/api/boards");
+        reqA.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenA);
+        reqA.Content = JsonContent.Create(new { name = "Board A" });
+        await _client.SendAsync(reqA);
+
+        var reqB = new HttpRequestMessage(HttpMethod.Post, "/api/boards");
+        reqB.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenB);
+        reqB.Content = JsonContent.Create(new { name = "Board B" });
+        await _client.SendAsync(reqB);
+
+        var listReq = new HttpRequestMessage(HttpMethod.Get, "/api/boards");
+        listReq.Headers.Authorization = new AuthenticationHeaderValue("Bearer", tokenA);
+        var listRes = await _client.SendAsync(listReq);
+
+        Assert.Equal(HttpStatusCode.OK, listRes.StatusCode);
+        var body = await listRes.Content.ReadAsStringAsync();
+        Assert.Contains("Board A", body);
+        Assert.DoesNotContain("Board B", body);
+    }
 }
