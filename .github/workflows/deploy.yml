@@ -16,15 +16,15 @@ jobs:
           dotnet-version: '8.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore
+        run: dotnet restore Kanban.slnx
 
       - name: Build and Test
         run: |
-          dotnet build --no-restore
-          dotnet test --no-build --verbosity normal
+          dotnet build Kanban.slnx --no-restore
+          dotnet test KanbanApi.Tests/KanbanApi.Tests.csproj --no-build --verbosity normal
 
       - name: Publish
-        run: dotnet publish -c Release -o ./publish --no-restore
+        run: dotnet publish KanbanApi.csproj -c Release -o ./publish --no-restore
 
       - name: Deploy to Azure
         uses: azure/webapps-deploy@v2
