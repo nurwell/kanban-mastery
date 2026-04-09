@@ -27,7 +27,7 @@ jobs:
         run: dotnet publish KanbanApi.csproj -c Release -o ./publish --no-restore
 
       - name: Zip publish output
-        run: zip -r publish.zip ./publish
+        run: cd ./publish && zip -r ../publish.zip . && cd ..
 
       - name: Deploy to Azure via Kudu
         env:
