@@ -21,9 +21,15 @@ builder.Services.AddCors(options =>
               .AllowCredentials());
 });
 
-// Register EF Core with SQLite
+// Register EF Core — SQLite in development, Azure SQL in production
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+    if (builder.Environment.IsDevelopment())
+        options.UseSqlite(connectionString);
+    else
+        options.UseSqlServer(connectionString);
+});
 
 // Register ASP.NET Core Identity with built-in API endpoints
 builder.Services.AddIdentityApiEndpoints<ApplicationUser>()
