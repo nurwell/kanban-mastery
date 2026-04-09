@@ -62,12 +62,14 @@ builder.Services.AddScoped<ICardService, CardService>();
 
 var app = builder.Build();
 
-// Run migrations on startup (skipped for in-memory test databases)
+// Apply schema on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    if (db.Database.IsRelational())
-        db.Database.Migrate();
+    if (app.Environment.IsDevelopment())
+        db.Database.EnsureCreated();   // SQLite: create from model directly
+    else if (db.Database.IsRelational())
+        db.Database.Migrate();         // SQL Server: run versioned migrations
 }
 
 // Configure the HTTP request pipeline.
