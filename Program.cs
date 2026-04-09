@@ -59,11 +59,12 @@ builder.Services.AddScoped<ICardService, CardService>();
 
 var app = builder.Build();
 
-// Run migrations on startup
+// Run migrations on startup (skipped for in-memory test databases)
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    db.Database.Migrate();
+    if (db.Database.IsRelational())
+        db.Database.Migrate();
 }
 
 // Configure the HTTP request pipeline.
