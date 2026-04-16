@@ -101,5 +101,13 @@ namespace KanbanApi.Services
             await _db.SaveChangesAsync();
             return DeleteColumnResult.Deleted;
         }
+
+        public async Task<List<BoardMember>> GetMembersAsync(int boardId)
+        {
+            return await _db.BoardMembers
+                .Include(m => m.ApplicationUser)
+                .Where(m => m.BoardId == boardId)
+                .ToListAsync();
+        }
     }
 }

@@ -115,6 +115,27 @@ namespace KanbanApi.Endpoints
             .RequireAuthorization()
             .WithName("DeleteBoard");
 
+            group.MapGet("/{boardId}/members", async (
+                int boardId,
+                ClaimsPrincipal user,
+                IAuthorizationService authService,
+                IDbBoardService dbBoardService) =>
+            {
+                var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
+                if (!authResult.Succeeded) return Results.Forbid();
+
+                var members = await dbBoardService.GetMembersAsync(boardId);
+                return Results.Ok(members.Select(m => new
+                {
+                    m.UserId,
+                    m.Role,
+                    Email = m.ApplicationUser?.Email,
+                    UserName = m.ApplicationUser?.UserName
+                }));
+            })
+            .RequireAuthorization()
+            .WithName("GetBoardMembers");
+
             group.MapPost("/{boardId}/members", async (
                 int boardId,
                 AddMemberRequest request,

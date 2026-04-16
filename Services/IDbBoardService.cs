@@ -13,5 +13,6 @@ namespace KanbanApi.Services
         Task<Column> CreateColumnAsync(int boardId, string title, int? position);
         Task<Column?> UpdateColumnAsync(int boardId, int columnId, string title);
         Task<DeleteColumnResult> DeleteColumnAsync(int boardId, int columnId);
+        Task<List<BoardMember>> GetMembersAsync(int boardId);
     }
 }

@@ -5,7 +5,8 @@ using Microsoft.AspNetCore.Authorization;
 namespace KanbanApi.Endpoints
 {
     public record CreateCardDto(string Title, string? Description, int ColumnId);
-    public record UpdateCardDto(string Title, string? Description, int ColumnId);
+    public record UpdateCardDto(string Title, string? Description, int ColumnId, int? Position, string? AssignedToUserId);
+    public record ReorderCardsDto(int[] CardIds);
 
     public static class CardEndpoints
     {
@@ -49,7 +50,7 @@ namespace KanbanApi.Endpoints
                 var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
                 if (!authResult.Succeeded) return Results.Forbid();
 
-                var card = await cardService.UpdateCardAsync(boardId, cardId, dto.Title, dto.Description, dto.ColumnId);
+                var card = await cardService.UpdateCardAsync(boardId, cardId, dto.Title, dto.Description, dto.ColumnId, dto.Position, dto.AssignedToUserId);
                 if (card is null) return Results.NotFound();
 
                 return Results.Ok(new
@@ -58,10 +59,30 @@ namespace KanbanApi.Endpoints
                     card.Title,
                     card.Description,
                     card.ColumnId,
+                    card.Position,
+                    card.AssignedToUserId,
                     card.CreatedAt
                 });
             })
             .WithName("UpdateCard");
+
+            routes.MapGroup("/api/boards/{boardId}/columns")
+                .RequireAuthorization()
+                .MapPut("/{columnId}/reorder", async (
+                    int boardId,
+                    int columnId,
+                    ReorderCardsDto dto,
+                    ClaimsPrincipal user,
+                    IAuthorizationService authService,
+                    ICardService cardService) =>
+                {
+                    var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
+                    if (!authResult.Succeeded) return Results.Forbid();
+
+                    var ok = await cardService.ReorderCardsAsync(boardId, columnId, dto.CardIds);
+                    return ok ? Results.NoContent() : Results.NotFound();
+                })
+                .WithName("ReorderCards");
 
             group.MapDelete("/{cardId}", async (
                 int boardId,

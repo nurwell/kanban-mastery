@@ -4,6 +4,7 @@ import { DragDropContext } from '@hello-pangea/dnd';
 import api from '../services/api';
 import Column from '../components/Column';
 import InviteModal from '../components/InviteModal';
+import CardModal from '../components/CardModal';
 
 export default function Board() {
   const { boardId } = useParams();
@@ -14,6 +15,14 @@ export default function Board() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [newColTitle, setNewColTitle] = useState('');
   const [addingCol, setAddingCol] = useState(false);
+  const [modalCard, setModalCard] = useState(null);
+  const [members, setMembers] = useState([]);
+
+  useEffect(() => {
+    api.get(`/api/boards/${boardId}/members`)
+      .then((res) => setMembers(res.data))
+      .catch(() => {});
+  }, [boardId]);
 
   useEffect(() => {
     api.get(`/api/boards/${boardId}`)
@@ -48,8 +57,36 @@ export default function Board() {
     setDragError('');
 
     try {
-      await api.put(`/api/boards/${boardId}/cards/${cardId}`, {
-        columnId: parseInt(destColumnId),
+      const isCrossColumn = source.droppableId !== destColumnId;
+      if (isCrossColumn) {
+        const card = originalBoard.columns
+          .find((c) => c.id.toString() === source.droppableId)?.cards[source.index];
+        if (card) {
+          await api.put(`/api/boards/${boardId}/cards/${cardId}`, {
+            title: card.title,
+            description: card.description ?? '',
+            columnId: parseInt(destColumnId),
+            position: destination.index,
+          });
+        }
+      }
+      // Always persist destination column order
+      setBoard((current) => {
+        const dstCol = current.columns.find((c) => c.id.toString() === destColumnId);
+        if (dstCol) {
+          api.put(`/api/boards/${boardId}/columns/${dstCol.id}/reorder`, {
+            cardIds: dstCol.cards.map((c) => c.id),
+          }).catch(() => {});
+        }
+        if (isCrossColumn) {
+          const srcCol = current.columns.find((c) => c.id.toString() === source.droppableId);
+          if (srcCol) {
+            api.put(`/api/boards/${boardId}/columns/${srcCol.id}/reorder`, {
+              cardIds: srcCol.cards.map((c) => c.id),
+            }).catch(() => {});
+          }
+        }
+        return current;
       });
     } catch {
       setBoard(originalBoard);
@@ -86,18 +123,29 @@ export default function Board() {
   };
 
   // ── Update card ───────────────────────────────────────────────────
-  const handleUpdateCard = async (cardId, title, description) => {
+  const handleUpdateCard = async (cardId, title, description, assignedToUserId) => {
     const col = board.columns.find((c) => c.cards.some((card) => card.id === cardId));
     if (!col) return;
-    await api.put(`/api/boards/${boardId}/cards/${cardId}`, { title, description, columnId: col.id });
+    const payload = { title, description, columnId: col.id };
+    if (assignedToUserId !== undefined) payload.assignedToUserId = assignedToUserId;
+    await api.put(`/api/boards/${boardId}/cards/${cardId}`, payload);
     setBoard((prev) => ({
       ...prev,
       columns: prev.columns.map((c) => ({
         ...c,
-        cards: c.cards.map((card) => card.id === cardId ? { ...card, title, description } : card),
+        cards: c.cards.map((card) =>
+          card.id === cardId
+            ? { ...card, title, description, ...(assignedToUserId !== undefined ? { assignedToUserId } : {}) }
+            : card
+        ),
       })),
     }));
+    if (modalCard?.id === cardId) {
+      setModalCard((prev) => prev ? { ...prev, title, description, ...(assignedToUserId !== undefined ? { assignedToUserId } : {}) } : null);
+    }
   };
+
+  const handleOpenModal = (card) => setModalCard(card);
 
   // ── Delete card ───────────────────────────────────────────────────
   const handleDeleteCard = async (cardId) => {
@@ -146,27 +194,48 @@ export default function Board() {
         )}
       </header>
 
-      {loading && <p className="status-message">Loading board…</p>}
-      {!loading && error && <p className="error">{error}</p>}
-      {dragError && <p className="error">{dragError}</p>}
+      {loading && (
+        <div className="columns-container">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="column-skeleton" style={{ animationDelay: `${i * 0.07}s` }}>
+              <div className="skeleton skeleton-col-title" />
+              <div className="skeleton skeleton-card" />
+              <div className="skeleton skeleton-card skeleton-card--sm" />
+              <div className="skeleton skeleton-card" />
+            </div>
+          ))}
+        </div>
+      )}
+      {!loading && error && <p className="error" style={{ margin: '1.5rem' }}>{error}</p>}
+      {dragError && <p className="error" style={{ margin: '0 1.5rem' }}>{dragError}</p>}
 
       {!loading && !error && board && (
         <DragDropContext onDragEnd={onDragEnd}>
           <div className="columns-container">
             {board.columns.length === 0 && (
-              <p className="status-message">No columns yet.</p>
+              <div className="empty-state" style={{ flex: 1 }}>
+                <div className="empty-icon">
+                  <div className="empty-icon-col" />
+                  <div className="empty-icon-col" />
+                  <div className="empty-icon-col" />
+                </div>
+                <p className="empty-title">No columns yet</p>
+                <p>Add your first column to start organizing work.</p>
+              </div>
             )}
-            {board.columns.map((col) => (
+            {board.columns.map((col, index) => (
               <Column
                 key={col.id}
                 id={col.id}
                 title={col.title}
                 cards={col.cards}
+                colIndex={index}
                 onCreateCard={handleCreateCard}
                 onDeleteCard={handleDeleteCard}
                 onUpdateCard={handleUpdateCard}
                 onDeleteColumn={handleDeleteColumn}
                 onRenameColumn={handleRenameColumn}
+                onOpenCard={handleOpenModal}
               />
             ))}
             <div className="add-column-form">
@@ -191,6 +260,16 @@ export default function Board() {
         isOpen={inviteOpen}
         onClose={() => setInviteOpen(false)}
       />
+
+      {modalCard && (
+        <CardModal
+          card={modalCard}
+          members={members}
+          onUpdate={handleUpdateCard}
+          onDelete={(id) => { handleDeleteCard(id); setModalCard(null); }}
+          onClose={() => setModalCard(null)}
+        />
+      )}
     </div>
   );
 }

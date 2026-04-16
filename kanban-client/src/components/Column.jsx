@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Droppable } from '@hello-pangea/dnd';
 import Card from './Card';
 
-export default function Column({ id, title, cards, onCreateCard, onDeleteCard, onUpdateCard, onDeleteColumn, onRenameColumn }) {
+export default function Column({ id, title, cards, colIndex, onCreateCard, onDeleteCard, onUpdateCard, onDeleteColumn, onRenameColumn, onOpenCard }) {
   const [adding, setAdding] = useState(false);
   const [title_, setTitle_] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,6 +36,7 @@ export default function Column({ id, title, cards, onCreateCard, onDeleteCard, o
   return (
     <div className="column">
       <div className="column-header">
+        <div className={`col-dot col-dot--${(colIndex ?? 0) % 6}`} />
         {renamingCol ? (
           <input
             className="column-rename-input"
@@ -51,6 +52,7 @@ export default function Column({ id, title, cards, onCreateCard, onDeleteCard, o
         ) : (
           <h2 className="column-title" onClick={() => setRenamingCol(true)} title="Click to rename">{title}</h2>
         )}
+        <span className="col-count">{cards.length}</span>
         <button className="column-delete-btn" onClick={() => onDeleteColumn(id)} title="Delete column">×</button>
       </div>
 
@@ -72,8 +74,10 @@ export default function Column({ id, title, cards, onCreateCard, onDeleteCard, o
                 title={card.title}
                 description={card.description}
                 assignedToUserId={card.assignedToUserId}
+                colIndex={colIndex}
                 onDelete={onDeleteCard}
                 onUpdate={onUpdateCard}
+                onOpen={onOpenCard ? () => onOpenCard(card) : undefined}
               />
             ))}
             {provided.placeholder}
