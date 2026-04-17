@@ -69,8 +69,10 @@ namespace KanbanApi.Endpoints
             {
                 var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
                 if (userId is null) return Results.Unauthorized();
+                var name = request.Name?.Trim();
+                if (string.IsNullOrEmpty(name) || name.Length > 100) return Results.BadRequest(new { message = "Board name must be 1–100 characters." });
 
-                var board = await dbBoardService.CreateBoardAsync(request.Name, userId);
+                var board = await dbBoardService.CreateBoardAsync(name, userId);
                 return Results.Created($"/api/boards/{board.Id}", new
                 {
                     board.Id,
@@ -91,8 +93,10 @@ namespace KanbanApi.Endpoints
             {
                 var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardOwner");
                 if (!authResult.Succeeded) return Results.Forbid();
+                var name = request.Name?.Trim();
+                if (string.IsNullOrEmpty(name) || name.Length > 100) return Results.BadRequest(new { message = "Board name must be 1–100 characters." });
 
-                var board = await dbBoardService.UpdateBoardAsync(boardId, request.Name);
+                var board = await dbBoardService.UpdateBoardAsync(boardId, name);
                 if (board is null) return Results.NotFound();
 
                 return Results.Ok(new { board.Id, board.Name, board.OwnerId, board.CreatedAt });
@@ -146,14 +150,13 @@ namespace KanbanApi.Endpoints
                 var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardOwner");
                 if (!authResult.Succeeded) return Results.Forbid();
 
-                await dbBoardService.AddMemberAsync(boardId, request.UserId);
-
-                return Results.Created($"/api/boards/{boardId}/members/{request.UserId}", new
+                var result = await dbBoardService.AddMemberAsync(boardId, request.UserId);
+                return result switch
                 {
-                    boardId,
-                    request.UserId,
-                    Role = "Member"
-                });
+                    AddMemberResult.UserNotFound => Results.NotFound(new { message = "User not found." }),
+                    AddMemberResult.AlreadyMember => Results.Conflict(new { message = "User is already a member." }),
+                    _ => Results.Created($"/api/boards/{boardId}/members/{request.UserId}", new { boardId, request.UserId, Role = "Member" })
+                };
             })
             .RequireAuthorization()
             .WithName("AddBoardMember");

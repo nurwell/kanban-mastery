@@ -61,7 +61,7 @@ export default function Card({ id, index, title, description, assignedToUserId, 
           <div className="card-footer">
             <button
               className="card-delete-btn"
-              onClick={() => onDelete(id)}
+              onClick={() => { if (window.confirm('Delete this card?')) onDelete(id); }}
               title="Delete card"
             >
               ×

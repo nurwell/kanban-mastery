@@ -31,6 +31,7 @@ export default function Dashboard() {
     e.preventDefault();
     if (!newName.trim()) return;
     setCreating(true);
+    setError('');
     try {
       const res = await api.post('/api/boards', { name: newName.trim() });
       setBoards((prev) => [...prev, res.data]);

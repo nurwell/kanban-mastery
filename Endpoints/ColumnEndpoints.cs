@@ -21,8 +21,10 @@ namespace KanbanApi.Endpoints
             {
                 var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
                 if (!authResult.Succeeded) return Results.Forbid();
+                var title = request.Title?.Trim();
+                if (string.IsNullOrEmpty(title) || title.Length > 100) return Results.BadRequest(new { message = "Column title must be 1–100 characters." });
 
-                var column = await boardService.CreateColumnAsync(boardId, request.Title, request.Position);
+                var column = await boardService.CreateColumnAsync(boardId, title, request.Position);
                 return Results.Created($"/api/boards/{boardId}/columns/{column.Id}", new
                 {
                     column.Id,
@@ -43,8 +45,10 @@ namespace KanbanApi.Endpoints
             {
                 var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
                 if (!authResult.Succeeded) return Results.Forbid();
+                var title = request.Title?.Trim();
+                if (string.IsNullOrEmpty(title) || title.Length > 100) return Results.BadRequest(new { message = "Column title must be 1–100 characters." });
 
-                var column = await boardService.UpdateColumnAsync(boardId, columnId, request.Title);
+                var column = await boardService.UpdateColumnAsync(boardId, columnId, title);
                 if (column is null) return Results.NotFound();
 
                 return Results.Ok(new
@@ -64,7 +68,7 @@ namespace KanbanApi.Endpoints
                 IAuthorizationService authService,
                 IDbBoardService boardService) =>
             {
-                var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardMember");
+                var authResult = await authService.AuthorizeAsync(user, boardId, "IsBoardOwner");
                 if (!authResult.Succeeded) return Results.Forbid();
 
                 var result = await boardService.DeleteColumnAsync(boardId, columnId);

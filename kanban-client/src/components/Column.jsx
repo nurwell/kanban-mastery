@@ -53,7 +53,7 @@ export default function Column({ id, title, cards, colIndex, onCreateCard, onDel
           <h2 className="column-title" onClick={() => setRenamingCol(true)} title="Click to rename">{title}</h2>
         )}
         <span className="col-count">{cards.length}</span>
-        <button className="column-delete-btn" onClick={() => onDeleteColumn(id)} title="Delete column">×</button>
+        <button className="column-delete-btn" onClick={() => { if (window.confirm(`Delete column "${title}"?`)) onDeleteColumn(id); }} title="Delete column">×</button>
       </div>
 
       <Droppable droppableId={id.toString()}>

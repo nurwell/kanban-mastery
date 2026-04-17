@@ -1,5 +1,6 @@
 using KanbanApi.Data;
 using KanbanApi.Models;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace KanbanApi.Services
@@ -7,17 +8,19 @@ namespace KanbanApi.Services
     public class DbBoardService : IDbBoardService
     {
         private readonly ApplicationDbContext _db;
+        private readonly UserManager<ApplicationUser> _users;
 
-        public DbBoardService(ApplicationDbContext db)
+        public DbBoardService(ApplicationDbContext db, UserManager<ApplicationUser> users)
         {
             _db = db;
+            _users = users;
         }
 
         public async Task<List<Board>> GetBoardsAsync(string userId)
         {
             return await _db.BoardMembers
                 .Where(m => m.UserId == userId)
-                .Include(m => m.Board)
+                .AsNoTracking()
                 .Select(m => m.Board)
                 .ToListAsync();
         }
@@ -37,16 +40,23 @@ namespace KanbanApi.Services
         public async Task<Board?> GetBoardAsync(int boardId)
         {
             return await _db.Boards
-                .Include(b => b.Columns)
-                    .ThenInclude(c => c.Cards)
+                .Include(b => b.Columns.OrderBy(c => c.Position))
+                    .ThenInclude(c => c.Cards.OrderBy(card => card.Position))
+                .AsNoTracking()
                 .FirstOrDefaultAsync(b => b.Id == boardId);
         }
 
-        public async Task AddMemberAsync(int boardId, string userId)
+        public async Task<AddMemberResult> AddMemberAsync(int boardId, string userId)
         {
-            var member = new BoardMember { BoardId = boardId, UserId = userId, Role = "Member" };
-            _db.BoardMembers.Add(member);
+            var user = await _users.FindByIdAsync(userId);
+            if (user is null) return AddMemberResult.UserNotFound;
+
+            var exists = await _db.BoardMembers.AnyAsync(m => m.BoardId == boardId && m.UserId == userId);
+            if (exists) return AddMemberResult.AlreadyMember;
+
+            _db.BoardMembers.Add(new BoardMember { BoardId = boardId, UserId = userId, Role = "Member" });
             await _db.SaveChangesAsync();
+            return AddMemberResult.Added;
         }
 
         public async Task<Board?> UpdateBoardAsync(int boardId, string name)
@@ -71,7 +81,9 @@ namespace KanbanApi.Services
 
         public async Task<Column> CreateColumnAsync(int boardId, string title, int? position)
         {
-            var pos = position ?? await _db.Columns.CountAsync(c => c.BoardId == boardId);
+            var pos = position ?? (await _db.Columns
+                .Where(c => c.BoardId == boardId)
+                .MaxAsync(c => (int?)c.Position) ?? -1) + 1;
             var column = new Column { BoardId = boardId, Title = title, Position = pos };
             _db.Columns.Add(column);
             await _db.SaveChangesAsync();
@@ -107,6 +119,7 @@ namespace KanbanApi.Services
             return await _db.BoardMembers
                 .Include(m => m.ApplicationUser)
                 .Where(m => m.BoardId == boardId)
+                .AsNoTracking()
                 .ToListAsync();
         }
     }

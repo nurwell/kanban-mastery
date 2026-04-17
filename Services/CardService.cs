@@ -20,8 +20,7 @@ namespace KanbanApi.Services
 
             var maxPosition = await _db.Cards
                 .Where(c => c.ColumnId == columnId)
-                .Select(c => (int?)c.Position)
-                .MaxAsync() ?? -1;
+                .MaxAsync(c => (int?)c.Position) ?? -1;
 
             var card = new Card
             {
@@ -45,6 +44,12 @@ namespace KanbanApi.Services
 
             var targetColumn = await _db.Columns.FirstOrDefaultAsync(c => c.Id == columnId && c.BoardId == boardId);
             if (targetColumn is null) return null;
+
+            if (assignedToUserId is not null && assignedToUserId != "")
+            {
+                var isMember = await _db.BoardMembers.AnyAsync(m => m.BoardId == boardId && m.UserId == assignedToUserId);
+                if (!isMember) return null;
+            }
 
             card.Title = title;
             card.Description = description ?? string.Empty;

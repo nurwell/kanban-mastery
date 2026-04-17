@@ -5,7 +5,6 @@ using KanbanApi.Models;
 using KanbanApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,8 +22,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowFrontend", policy =>
         policy.WithOrigins(allowedOrigins)
               .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials());
+              .AllowAnyMethod());
 });
 
 // Register EF Core — SQLite in development, Azure SQL in production
@@ -36,7 +34,6 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     else
         options.UseSqlServer(connectionString);
 
-    options.ConfigureWarnings(w => w.Ignore(RelationalEventId.PendingModelChangesWarning));
 });
 
 // Register ASP.NET Core Identity with built-in API endpoints
@@ -55,7 +52,7 @@ builder.Services.AddAuthorization(options =>
 });
 
 // Register application services
-builder.Services.AddSingleton<IBoardService, BoardService>();
+builder.Services.AddScoped<IBoardService, BoardService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IDbBoardService, DbBoardService>();
 builder.Services.AddScoped<ICardService, CardService>();
@@ -66,10 +63,8 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    if (app.Environment.IsDevelopment())
-        db.Database.EnsureCreated();   // SQLite: create from model directly
-    else if (db.Database.IsRelational())
-        db.Database.Migrate();         // SQL Server: run versioned migrations
+    if (db.Database.IsRelational())
+        db.Database.Migrate();
 }
 
 // Configure the HTTP request pipeline.

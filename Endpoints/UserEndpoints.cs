@@ -23,9 +23,11 @@ namespace KanbanApi.Endpoints
             .WithName("GetCurrentUser");
 
             routes.MapGet("/api/users/lookup", async (
-                string email,
+                string? email,
                 UserManager<ApplicationUser> userManager) =>
             {
+                if (string.IsNullOrWhiteSpace(email)) return Results.BadRequest(new { message = "Email is required." });
+
                 var user = await userManager.FindByEmailAsync(email);
                 if (user is null) return Results.NotFound(new { message = "No user found with that email" });
 

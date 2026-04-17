@@ -13,6 +13,12 @@ export default function CardModal({ card, members, onUpdate, onDelete, onClose }
     setAssignedTo(card.assignedToUserId ?? '');
   }, [card.id]);
 
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   const handleSave = async () => {
     const trimmed = title.trim();
     if (!trimmed) return;
@@ -20,6 +26,7 @@ export default function CardModal({ card, members, onUpdate, onDelete, onClose }
     setError('');
     try {
       await onUpdate(card.id, trimmed, description, assignedTo || null);
+      onClose();
     } catch {
       setError('Failed to save changes.');
     } finally {
@@ -27,15 +34,10 @@ export default function CardModal({ card, members, onUpdate, onDelete, onClose }
     }
   };
 
-  const handleOverlayKey = (e) => {
-    if (e.key === 'Escape') onClose();
-  };
-
   return (
     <div
       className="modal-overlay"
       onClick={onClose}
-      onKeyDown={handleOverlayKey}
       role="dialog"
       aria-modal="true"
     >
@@ -85,7 +87,7 @@ export default function CardModal({ card, members, onUpdate, onDelete, onClose }
         {error && <p className="modal-error">{error}</p>}
 
         <div className="mc-footer">
-          <button className="btn-danger" onClick={() => onDelete(card.id)} disabled={saving}>
+          <button className="btn-danger" onClick={() => { if (window.confirm('Delete this card?')) onDelete(card.id); }} disabled={saving}>
             Delete card
           </button>
           <div className="mc-footer-right">

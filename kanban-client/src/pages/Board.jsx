@@ -19,16 +19,23 @@ export default function Board() {
   const [members, setMembers] = useState([]);
 
   useEffect(() => {
-    api.get(`/api/boards/${boardId}/members`)
-      .then((res) => setMembers(res.data))
-      .catch(() => {});
-  }, [boardId]);
+    const controller = new AbortController();
+    const { signal } = controller;
 
-  useEffect(() => {
-    api.get(`/api/boards/${boardId}`)
-      .then((res) => setBoard(res.data))
-      .catch(() => setError('Failed to load board'))
+    Promise.all([
+      api.get(`/api/boards/${boardId}`, { signal }),
+      api.get(`/api/boards/${boardId}/members`, { signal }),
+    ])
+      .then(([boardRes, membersRes]) => {
+        setBoard(boardRes.data);
+        setMembers(membersRes.data);
+      })
+      .catch((err) => {
+        if (err.name !== 'CanceledError') setError('Failed to load board');
+      })
       .finally(() => setLoading(false));
+
+    return () => controller.abort();
   }, [boardId]);
 
   // ── Drag-and-drop ────────────────────────────────────────────────
@@ -45,19 +52,19 @@ export default function Board() {
     const destColumnId = destination.droppableId;
     const originalBoard = board;
 
-    setBoard((prev) => {
-      const columns = prev.columns.map((col) => ({ ...col, cards: [...col.cards] }));
-      const srcCol = columns.find((c) => c.id.toString() === source.droppableId);
-      const dstCol = columns.find((c) => c.id.toString() === destColumnId);
-      const [moved] = srcCol.cards.splice(source.index, 1);
-      dstCol.cards.splice(destination.index, 0, moved);
-      return { ...prev, columns };
-    });
+    // Compute optimistic next state up front
+    const nextColumns = board.columns.map((col) => ({ ...col, cards: [...col.cards] }));
+    const srcCol = nextColumns.find((c) => c.id.toString() === source.droppableId);
+    const dstCol = nextColumns.find((c) => c.id.toString() === destColumnId);
+    const [moved] = srcCol.cards.splice(source.index, 1);
+    dstCol.cards.splice(destination.index, 0, moved);
+    const nextBoard = { ...board, columns: nextColumns };
 
+    setBoard(nextBoard);
     setDragError('');
 
+    const isCrossColumn = source.droppableId !== destColumnId;
     try {
-      const isCrossColumn = source.droppableId !== destColumnId;
       if (isCrossColumn) {
         const card = originalBoard.columns
           .find((c) => c.id.toString() === source.droppableId)?.cards[source.index];
@@ -70,25 +77,16 @@ export default function Board() {
           });
         }
       }
-      // Always persist destination column order
-      setBoard((current) => {
-        const dstCol = current.columns.find((c) => c.id.toString() === destColumnId);
-        if (dstCol) {
-          api.put(`/api/boards/${boardId}/columns/${dstCol.id}/reorder`, {
-            cardIds: dstCol.cards.map((c) => c.id),
-          }).catch(() => {});
-        }
-        if (isCrossColumn) {
-          const srcCol = current.columns.find((c) => c.id.toString() === source.droppableId);
-          if (srcCol) {
-            api.put(`/api/boards/${boardId}/columns/${srcCol.id}/reorder`, {
-              cardIds: srcCol.cards.map((c) => c.id),
-            }).catch(() => {});
-          }
-        }
-        return current;
+      // Persist destination column order
+      await api.put(`/api/boards/${boardId}/columns/${dstCol.id}/reorder`, {
+        cardIds: dstCol.cards.map((c) => c.id),
       });
-    } catch {
+      if (isCrossColumn) {
+        await api.put(`/api/boards/${boardId}/columns/${srcCol.id}/reorder`, {
+          cardIds: srcCol.cards.map((c) => c.id),
+        });
+      }
+    } catch (_) {
       setBoard(originalBoard);
       setDragError('Failed to move card. Change reverted.');
     }
@@ -103,6 +101,8 @@ export default function Board() {
       const res = await api.post(`/api/boards/${boardId}/columns`, { title: newColTitle.trim() });
       setBoard((prev) => ({ ...prev, columns: [...prev.columns, { ...res.data, cards: [] }] }));
       setNewColTitle('');
+    } catch (_) {
+      setDragError('Failed to create column.');
     } finally {
       setAddingCol(false);
     }
@@ -110,16 +110,21 @@ export default function Board() {
 
   // ── Create card ──────────────────────────────────────────────────
   const handleCreateCard = async (columnId, title) => {
-    const res = await api.post(`/api/boards/${boardId}/cards`, { title, columnId });
-    const newCard = res.data;
-    setBoard((prev) => ({
-      ...prev,
-      columns: prev.columns.map((col) =>
-        col.id === columnId
-          ? { ...col, cards: [...col.cards, newCard] }
-          : col
-      ),
-    }));
+    try {
+      const res = await api.post(`/api/boards/${boardId}/cards`, { title, columnId });
+      const newCard = res.data;
+      setBoard((prev) => ({
+        ...prev,
+        columns: prev.columns.map((col) =>
+          col.id === columnId
+            ? { ...col, cards: [...col.cards, newCard] }
+            : col
+        ),
+      }));
+    } catch (_) {
+      setDragError('Failed to create card.');
+      throw _;
+    }
   };
 
   // ── Update card ───────────────────────────────────────────────────
@@ -128,20 +133,17 @@ export default function Board() {
     if (!col) return;
     const payload = { title, description, columnId: col.id };
     if (assignedToUserId !== undefined) payload.assignedToUserId = assignedToUserId;
-    await api.put(`/api/boards/${boardId}/cards/${cardId}`, payload);
+    const res = await api.put(`/api/boards/${boardId}/cards/${cardId}`, payload);
+    const updated = res.data;
     setBoard((prev) => ({
       ...prev,
       columns: prev.columns.map((c) => ({
         ...c,
-        cards: c.cards.map((card) =>
-          card.id === cardId
-            ? { ...card, title, description, ...(assignedToUserId !== undefined ? { assignedToUserId } : {}) }
-            : card
-        ),
+        cards: c.cards.map((card) => card.id === cardId ? { ...card, ...updated } : card),
       })),
     }));
     if (modalCard?.id === cardId) {
-      setModalCard((prev) => prev ? { ...prev, title, description, ...(assignedToUserId !== undefined ? { assignedToUserId } : {}) } : null);
+      setModalCard((prev) => prev ? { ...prev, ...updated } : null);
     }
   };
 
@@ -149,23 +151,32 @@ export default function Board() {
 
   // ── Delete card ───────────────────────────────────────────────────
   const handleDeleteCard = async (cardId) => {
-    await api.delete(`/api/boards/${boardId}/cards/${cardId}`);
-    setBoard((prev) => ({
-      ...prev,
-      columns: prev.columns.map((col) => ({
-        ...col,
-        cards: col.cards.filter((card) => card.id !== cardId),
-      })),
-    }));
+    try {
+      await api.delete(`/api/boards/${boardId}/cards/${cardId}`);
+      setBoard((prev) => ({
+        ...prev,
+        columns: prev.columns.map((col) => ({
+          ...col,
+          cards: col.cards.filter((card) => card.id !== cardId),
+        })),
+      }));
+    } catch (_) {
+      setDragError('Failed to delete card.');
+    }
   };
 
   // ── Rename column ─────────────────────────────────────────────────
   const handleRenameColumn = async (columnId, title) => {
-    await api.put(`/api/boards/${boardId}/columns/${columnId}`, { title });
-    setBoard((prev) => ({
-      ...prev,
-      columns: prev.columns.map((col) => col.id === columnId ? { ...col, title } : col),
-    }));
+    try {
+      await api.put(`/api/boards/${boardId}/columns/${columnId}`, { title });
+      setBoard((prev) => ({
+        ...prev,
+        columns: prev.columns.map((col) => col.id === columnId ? { ...col, title } : col),
+      }));
+    } catch (_) {
+      setDragError('Failed to rename column.');
+      throw _;
+    }
   };
 
   // ── Delete column ─────────────────────────────────────────────────
